@@ -1,0 +1,57 @@
+# 项目核心目标
+target:
+  - 开发资源占用低于50MB的便签工具
+  - 安装包控制在20MB内
+  - 使用Tauri框架确保跨平台兼容性
+
+# 技术栈约束
+tech_stack:
+  frontend: [html, css, typescript]
+  backend: rust
+  database: sqlite3 (encrypted via SQLCipher)
+  forbidden: [electron, nodejs]
+
+# 功能规则
+rules:
+  - description: 系统托盘图标与菜单
+    actions:
+      - 使用 `tauri-plugin-tray` 实现托盘图标
+      - 右键菜单必须包含 "退出" 和 "设置" 选项
+      - Windows图标尺寸为16x16和32x32
+    context:
+      dependencies: 
+        - tauri-plugin-tray = "2.0"
+      performance:
+        memory_usage: <5MB
+
+  - description: 全局快捷键
+    actions:
+      - 使用 `tauri-plugin-global-shortcut` 注册快捷键
+      - 添加冲突检测逻辑（注册失败时通知用户）
+      - Windows下需管理员权限运行配置示例
+    context:
+      dependencies:
+        - tauri-plugin-global-shortcut = "1.0"
+      shortcuts:
+        - Win+Shift+C: 打开主输入窗口
+        - Win+Shift+X: 触发截图工具
+
+  - description: 数据库与存储
+    actions:
+      - 使用 `rusqlite` 启用 SQLCipher 加密
+      - 数据表结构必须包含: id(INTEGER PK), content(TEXT), screenshot_path(TEXT), created_at(DATETIME)
+      - 加密密钥通过 Windows Credential Manager 存储
+    context:
+      dependencies:
+        - rusqlite = { version = "0.29", features = ["sqlcipher"] }
+      security:
+        forbidden_patterns: ["PRAGMA key='';"]
+
+  - description: 便签管理
+    actions:
+      - 使用原生 TypeScript 实现列表渲染（禁用框架）
+      - 搜索功能添加300ms防抖逻辑
+      - 超过50条便签时启用虚拟滚动
+    context:
+      performance:
+        memory_usage: <20MB (千条数据测试)

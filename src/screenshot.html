@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>截图工具</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: rgba(0, 0, 0, 0.3);
+      font-family: 'Microsoft YaHei', sans-serif;
+      user-select: none;
+    }
+    
+    #screenshot-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      cursor: crosshair;
+    }
+    
+    #screenshot-image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    #selection-area {
+      position: absolute;
+      border: 2px dashed #007bff;
+      background-color: rgba(0, 123, 255, 0.1);
+      z-index: 2;
+      display: none;
+      pointer-events: none;
+    }
+    
+    #toolbar {
+      position: absolute;
+      background-color: #fff;
+      border-radius: 4px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      padding: 5px 10px;
+      display: flex;
+      gap: 10px;
+      z-index: 3;
+      display: none;
+    }
+    
+    .toolbar-button {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 3px;
+      background-color: #f1f1f1;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    
+    .toolbar-button:hover {
+      background-color: #e0e0e0;
+    }
+    
+    .toolbar-button.confirm {
+      background-color: #007bff;
+      color: #fff;
+    }
+    
+    .toolbar-button.confirm:hover {
+      background-color: #0069d9;
+    }
+    
+    .toolbar-button.cancel {
+      background-color: #f44336;
+      color: #fff;
+    }
+    
+    .toolbar-button.cancel:hover {
+      background-color: #d32f2f;
+    }
+    
+    #dimensions-info {
+      position: absolute;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 3px 6px;
+      border-radius: 2px;
+      font-size: 12px;
+      pointer-events: none;
+      z-index: 3;
+      display: none;
+    }
+    
+    .magnifier {
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      border: 2px solid white;
+      overflow: hidden;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      z-index: 4;
+      display: none;
+      pointer-events: none;
+    }
+    
+    .magnifier-image {
+      position: absolute;
+      transform-origin: 0 0;
+      transform: scale(2);
+    }
+  </style>
+</head>
+<body>
+  <div id="screenshot-container">
+    <img id="screenshot-image" src="" alt="截图" />
+    <div id="selection-area"></div>
+    <div id="dimensions-info"></div>
+    <div id="toolbar">
+      <button class="toolbar-button confirm" id="save-button">保存便签</button>
+      <button class="toolbar-button" id="copy-button">复制到剪贴板</button>
+      <button class="toolbar-button cancel" id="cancel-button">取消</button>
+    </div>
+    <div class="magnifier" id="magnifier">
+      <img id="magnifier-image" class="magnifier-image" src="" alt="放大器" />
+    </div>
+  </div>
+  
+  <script>
+    const { invoke } = window.__TAURI__.tauri;
+    const { appWindow, WebviewWindow } = window.__TAURI__.window;
+    const { emit, listen } = window.__TAURI__.event;
+    
+    // 元素引用
+    const container = document.getElementById('screenshot-container');
+    const screenshotImage = document.getElementById('screenshot-image');
+    const selectionArea = document.getElementById('selection-area');
+    const dimensionsInfo = document.getElementById('dimensions-info');
+    const toolbar = document.getElementById('toolbar');
+    const saveButton = document.getElementById('save-button');
+    const copyButton = document.getElementById('copy-button');
+    const cancelButton = document.getElementById('cancel-button');
+    const magnifier = document.getElementById('magnifier');
+    const magnifierImage = document.getElementById('magnifier-image');
+    
+    // 选择区域状态
+    let isSelecting = false;
+    let startX = 0, startY = 0;
+    let currentX = 0, currentY = 0;
+    let selectionWidth = 0, selectionHeight = 0;
+    
+    // 监听来自 Rust 的屏幕截图数据
+    listen('screenshot-data', (event) => {
+      const imageData = event.payload;
+      screenshotImage.src = imageData;
+      magnifierImage.src = imageData;
+    });
+    
+    // 初始化事件监听器
+    function initEventListeners() {
+      // 鼠标按下事件
+      container.addEventListener('mousedown', startSelection);
+      
+      // 鼠标移动事件
+      container.addEventListener('mousemove', (e) => {
+        updateMagnifier(e);
+        
+        if (isSelecting) {
+          updateSelection(e);
+        }
+      });
+      
+      // 鼠标释放事件
+      container.addEventListener('mouseup', endSelection);
+      
+      // 按键监听
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          cancelScreenshot();
+        }
+      });
+      
+      // 按钮点击事件
+      saveButton.addEventListener('click', saveScreenshot);
+      copyButton.addEventListener('click', copyToClipboard);
+      cancelButton.addEventListener('click', cancelScreenshot);
+    }
+    
+    // 开始选择区域
+    function startSelection(e) {
+      isSelecting = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      
+      // 重置选择区域
+      selectionArea.style.display = 'block';
+      selectionArea.style.left = startX + 'px';
+      selectionArea.style.top = startY + 'px';
+      selectionArea.style.width = '0';
+      selectionArea.style.height = '0';
+      
+      // 显示维度信息
+      dimensionsInfo.style.display = 'block';
+      dimensionsInfo.style.left = (startX + 10) + 'px';
+      dimensionsInfo.style.top = (startY + 10) + 'px';
+      dimensionsInfo.textContent = '0 x 0';
+      
+      // 隐藏工具栏
+      toolbar.style.display = 'none';
+    }
+    
+    // 更新选择区域
+    function updateSelection(e) {
+      currentX = e.clientX;
+      currentY = e.clientY;
+      
+      // 计算选择区域的位置和尺寸
+      const left = Math.min(startX, currentX);
+      const top = Math.min(startY, currentY);
+      selectionWidth = Math.abs(currentX - startX);
+      selectionHeight = Math.abs(currentY - startY);
+      
+      // 更新选择区域
+      selectionArea.style.left = left + 'px';
+      selectionArea.style.top = top + 'px';
+      selectionArea.style.width = selectionWidth + 'px';
+      selectionArea.style.height = selectionHeight + 'px';
+      
+      // 更新维度信息
+      dimensionsInfo.textContent = `${selectionWidth} x ${selectionHeight}`;
+      dimensionsInfo.style.left = (currentX + 10) + 'px';
+      dimensionsInfo.style.top = (currentY + 10) + 'px';
+    }
+    
+    // 结束选择区域
+    function endSelection() {
+      if (!isSelecting) return;
+      isSelecting = false;
+      
+      // 计算选择区域的尺寸
+      if (selectionWidth < 5 || selectionHeight < 5) {
+        // 如果选择区域太小，则忽略
+        selectionArea.style.display = 'none';
+        dimensionsInfo.style.display = 'none';
+        return;
+      }
+      
+      // 显示工具栏
+      const left = Math.min(startX, currentX);
+      const top = Math.min(startY, currentY) + selectionHeight + 10;
+      toolbar.style.display = 'flex';
+      toolbar.style.left = left + 'px';
+      toolbar.style.top = top + 'px';
+      
+      // 保持维度信息显示
+      dimensionsInfo.style.left = left + 'px';
+      dimensionsInfo.style.top = (top - 25) + 'px';
+    }
+    
+    // 更新放大镜
+    function updateMagnifier(e) {
+      if (isSelecting) {
+        magnifier.style.display = 'none';
+        return;
+      }
+      
+      const x = e.clientX;
+      const y = e.clientY;
+      
+      // 设置放大镜位置
+      magnifier.style.display = 'block';
+      magnifier.style.left = (x - 75) + 'px';
+      magnifier.style.top = (y - 75) + 'px';
+      
+      // 设置放大的图像位置
+      magnifierImage.style.left = (-x * 2 + 75) + 'px';
+      magnifierImage.style.top = (-y * 2 + 75) + 'px';
+    }
+    
+    // 保存截图
+    async function saveScreenshot() {
+      try {
+        // 获取选择区域
+        const left = Math.min(startX, currentX);
+        const top = Math.min(startY, currentY);
+        
+        // 调用 Rust 函数保存截图
+        const filePath = await invoke('save_screenshot_data', {
+          imageData: screenshotImage.src,
+          x: left,
+          y: top,
+          width: selectionWidth,
+          height: selectionHeight
+        });
+        
+        console.log('截图已保存到:', filePath);
+        
+        // 创建一个新的便签窗口
+        const noteWindow = new WebviewWindow('note-' + Date.now(), {
+          url: 'note.html',
+          title: '新便签',
+          width: 300,
+          height: 300,
+          decorations: false,
+          transparent: true
+        });
+        
+        // 关闭截图窗口
+        appWindow.close();
+      } catch (error) {
+        console.error('保存截图失败:', error);
+      }
+    }
+    
+    // 复制到剪贴板
+    async function copyToClipboard() {
+      try {
+        // TODO: 实现复制到剪贴板功能
+        alert('复制到剪贴板功能尚未实现');
+      } catch (error) {
+        console.error('复制到剪贴板失败:', error);
+      }
+    }
+    
+    // 取消截图
+    async function cancelScreenshot() {
+      try {
+        // 调用 Rust 函数取消截图
+        await invoke('cancel_screenshot');
+        
+        // 关闭窗口
+        appWindow.close();
+      } catch (error) {
+        console.error('取消截图失败:', error);
+      }
+    }
+    
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', initEventListeners);
+  </script>
+</body>
+</html> 

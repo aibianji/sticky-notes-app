@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>设置</title>
+  <style>
+    body {
+      font-family: 'Microsoft YaHei', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    
+    .settings-container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    
+    h1 {
+      margin-top: 0;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+      color: #333;
+      font-size: 24px;
+    }
+    
+    .settings-section {
+      margin-bottom: 25px;
+    }
+    
+    h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #444;
+    }
+    
+    .settings-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    label {
+      flex: 0 0 150px;
+      color: #555;
+    }
+    
+    input[type="text"],
+    input[type="password"],
+    select {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 10px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: #2196F3;
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    
+    .button-group {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .primary-button {
+      background-color: #2196F3;
+      color: white;
+    }
+    
+    .primary-button:hover {
+      background-color: #0b7dda;
+    }
+    
+    .secondary-button {
+      background-color: #f1f1f1;
+      color: #333;
+    }
+    
+    .secondary-button:hover {
+      background-color: #ddd;
+    }
+    
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+    
+    .toast.show {
+      opacity: 1;
+    }
+    
+    /* 快捷键样式 */
+    .shortcut-input-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .shortcut-input {
+      background-color: #f0f0f0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 6px 10px;
+      min-width: 150px;
+      text-align: center;
+      user-select: none;
+      cursor: pointer;
+    }
+    
+    .shortcut-input.recording {
+      background-color: #ffeaea;
+      border-color: #ff5252;
+      color: #ff5252;
+      animation: pulse 1s infinite;
+    }
+    
+    .reset-button {
+      background-color: #e0e0e0;
+      border: none;
+      border-radius: 4px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .reset-button:hover {
+      background-color: #d0d0d0;
+    }
+    
+    .shortcut-hint {
+      font-size: 12px;
+      color: #666;
+      margin-top: 8px;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast"></div>
+  
+  <div class="settings-container">
+    <h1>应用设置</h1>
+    
+    <div class="settings-section">
+      <h2>常规设置</h2>
+      <div class="settings-row">
+        <label for="auto-start">开机自启动:</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="auto-start">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="settings-row">
+        <label for="theme">应用主题:</label>
+        <select id="theme">
+          <option value="light">浅色</option>
+          <option value="dark">深色</option>
+          <option value="system">跟随系统</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="settings-section">
+      <h2>数据设置</h2>
+      <div class="settings-row">
+        <label for="auto-backup">自动备份:</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="auto-backup">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="settings-row">
+        <label for="backup-interval">备份间隔:</label>
+        <select id="backup-interval">
+          <option value="daily">每天</option>
+          <option value="weekly">每周</option>
+          <option value="monthly">每月</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <label for="backup-location">备份位置:</label>
+        <input type="text" id="backup-location" readonly>
+        <button class="secondary-button" id="browse-backup">浏览...</button>
+      </div>
+    </div>
+    
+    <div class="settings-section">
+      <h2>全局快捷键</h2>
+      <div class="settings-row">
+        <label for="shortcut-open-main">打开主窗口:</label>
+        <div class="shortcut-input-container">
+          <input type="text" id="shortcut-open-main" class="shortcut-input" readonly placeholder="点击设置快捷键">
+          <button class="reset-button" id="reset-open-main">重置</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <label for="shortcut-screenshot">截图工具:</label>
+        <div class="shortcut-input-container">
+          <input type="text" id="shortcut-screenshot" class="shortcut-input" readonly placeholder="点击设置快捷键">
+          <button class="reset-button" id="reset-screenshot">重置</button>
+        </div>
+      </div>
+      <p class="shortcut-hint">点击输入框进入录制模式，然后按下快捷键组合</p>
+    </div>
+    
+    <div class="settings-section">
+      <h2>安全设置</h2>
+      <div class="settings-row">
+        <label for="encryption">启用数据加密:</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="encryption">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="settings-row">
+        <label for="password">设置密码:</label>
+        <input type="password" id="password" placeholder="输入密码">
+      </div>
+      <div class="settings-row">
+        <label for="confirm-password">确认密码:</label>
+        <input type="password" id="confirm-password" placeholder="确认密码">
+      </div>
+    </div>
+    
+    <div class="button-group">
+      <button class="secondary-button" id="cancel-button">取消</button>
+      <button class="primary-button" id="save-button">保存设置</button>
+    </div>
+  </div>
+  
+  <script>
+    const { invoke } = window.__TAURI__.tauri;
+    const { dialog } = window.__TAURI__;
+    
+    // 显示提示信息
+    function showToast(message, duration = 3000) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.add('show');
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, duration);
+    }
+    
+    // 加载设置
+    async function loadSettings() {
+      try {
+        // 模拟加载设置
+        document.getElementById('auto-start').checked = false;
+        document.getElementById('theme').value = 'light';
+        document.getElementById('auto-backup').checked = true;
+        document.getElementById('backup-interval').value = 'weekly';
+        document.getElementById('backup-location').value = 'C:/Users/Documents/Backups';
+        document.getElementById('encryption').checked = true;
+        
+        showToast('设置已加载');
+      } catch (error) {
+        console.error('加载设置失败:', error);
+        showToast('加载设置失败');
+      }
+    }
+    
+    // 保存设置
+    async function saveSettings() {
+      try {
+        // 模拟保存设置
+        const settings = {
+          autoStart: document.getElementById('auto-start').checked,
+          theme: document.getElementById('theme').value,
+          autoBackup: document.getElementById('auto-backup').checked,
+          backupInterval: document.getElementById('backup-interval').value,
+          backupLocation: document.getElementById('backup-location').value,
+          encryption: document.getElementById('encryption').checked,
+          password: document.getElementById('encryption').checked ? document.getElementById('password').value : null
+        };
+        
+        console.log('保存设置:', settings);
+        showToast('设置已保存');
+      } catch (error) {
+        console.error('保存设置失败:', error);
+        showToast('保存设置失败');
+      }
+    }
+    
+    // 选择备份文件夹
+    async function selectBackupFolder() {
+      try {
+        const selected = await dialog.open({
+          directory: true,
+          multiple: false,
+          title: "选择备份文件夹"
+        });
+        
+        if (selected) {
+          document.getElementById('backup-location').value = selected;
+        }
+      } catch (error) {
+        console.error('选择文件夹失败:', error);
+      }
+    }
+    
+    // 快捷键相关功能
+    async function loadShortcuts() {
+      try {
+        // 从后端获取所有快捷键
+        const shortcutMappings = await invoke('get_all_shortcut_mappings');
+        const shortcuts = {};
+        
+        // 转换为键值对形式
+        shortcutMappings.forEach(mapping => {
+          shortcuts[mapping.action] = mapping.shortcut;
+        });
+        
+        // 填充快捷键输入框
+        document.getElementById('shortcut-open-main').value = shortcuts['open_main_window'] || 'CommandOrControl+Shift+C';
+        document.getElementById('shortcut-screenshot').value = shortcuts['trigger_screenshot'] || 'CommandOrControl+Shift+X';
+      } catch (error) {
+        console.error('加载快捷键失败:', error);
+        showToast('加载快捷键失败: ' + error);
+      }
+    }
+    
+    // 设置快捷键输入
+    function setupShortcutInput(inputId, actionName, defaultShortcut) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      
+      let isRecording = false;
+      let currentModifiers = [];
+      
+      // 点击输入框开始录制
+      input.addEventListener('click', () => {
+        if (isRecording) return;
+        
+        isRecording = true;
+        currentModifiers = [];
+        input.value = '按下快捷键...';
+        input.classList.add('recording');
+      });
+      
+      // 按键事件处理
+      window.addEventListener('keydown', async (e) => {
+        if (!isRecording || inputId !== input.id) return;
+        
+        e.preventDefault();
+        
+        // 检测修饰键
+        const modifier = getModifierKey(e);
+        if (modifier && !currentModifiers.includes(modifier)) {
+          currentModifiers.push(modifier);
+        }
+        
+        // 检测普通键 (非修饰键)
+        const key = getNormalKey(e);
+        if (key && !['Control', 'Alt', 'Shift', 'Meta'].includes(key)) {
+          // 完成快捷键录制
+          isRecording = false;
+          
+          // 构建快捷键字符串
+          let shortcutString = '';
+          if (currentModifiers.includes('CommandOrControl')) {
+            shortcutString += 'CommandOrControl+';
+          } else {
+            if (currentModifiers.includes('Control')) shortcutString += 'Control+';
+            if (currentModifiers.includes('Meta')) shortcutString += 'Meta+';
+          }
+          
+          if (currentModifiers.includes('Alt')) shortcutString += 'Alt+';
+          if (currentModifiers.includes('Shift')) shortcutString += 'Shift+';
+          
+          shortcutString += key;
+          
+          try {
+            // 先检查快捷键是否可用
+            const isAvailable = await invoke('check_shortcut', { 
+              shortcut: shortcutString 
+            });
+            
+            if (!isAvailable) {
+              input.value = '';
+              showToast('该快捷键已被其他应用程序使用，请选择其他组合。');
+              input.classList.remove('recording');
+              return;
+            }
+            
+            // 更新快捷键
+            await invoke('update_shortcut_command', { 
+              action: actionName, 
+              newShortcut: shortcutString 
+            });
+            
+            input.value = shortcutString;
+            showToast('快捷键已更新');
+          } catch (error) {
+            input.value = '';
+            showToast(`快捷键设置失败: ${error}`);
+            await loadShortcuts(); // 重新加载原快捷键
+          }
+          
+          input.classList.remove('recording');
+        }
+      });
+      
+      // 重置按钮
+      const resetButton = document.getElementById(`reset-${inputId.split('-').pop()}`);
+      if (resetButton) {
+        resetButton.addEventListener('click', async () => {
+          try {
+            await invoke('update_shortcut_command', { 
+              action: actionName, 
+              newShortcut: defaultShortcut
+            });
+            
+            input.value = defaultShortcut;
+            showToast('快捷键已重置为默认值');
+          } catch (error) {
+            showToast(`重置快捷键失败: ${error}`);
+          }
+        });
+      }
+    }
+    
+    // 获取修饰键
+    function getModifierKey(e) {
+      if (e.key === 'Control') return 'Control';
+      if (e.key === 'Alt') return 'Alt';
+      if (e.key === 'Shift') return 'Shift';
+      if (e.key === 'Meta') return 'CommandOrControl'; // Windows键或Mac的Command键
+      return null;
+    }
+    
+    // 获取普通键
+    function getNormalKey(e) {
+      // 如果是修饰键，直接返回
+      if (['Control', 'Alt', 'Shift', 'Meta'].includes(e.key)) {
+        return e.key;
+      }
+      
+      // 功能键 F1-F12
+      if (e.key.match(/^F[1-9]$/) || e.key.match(/^F1[0-2]$/)) {
+        return e.key;
+      }
+      
+      // 特殊键
+      const specialKeys = {
+        'Escape': 'Escape',
+        'Tab': 'Tab',
+        'CapsLock': 'CapsLock',
+        'Backspace': 'Backspace',
+        'Enter': 'Enter',
+        'ArrowUp': 'Up',
+        'ArrowDown': 'Down',
+        'ArrowLeft': 'Left',
+        'ArrowRight': 'Right',
+        'Home': 'Home',
+        'End': 'End',
+        'PageUp': 'PageUp',
+        'PageDown': 'PageDown',
+        'Insert': 'Insert',
+        'Delete': 'Delete',
+        ' ': 'Space'
+      };
+      
+      if (specialKeys[e.key]) {
+        return specialKeys[e.key];
+      }
+      
+      // 字母和数字
+      return e.key.toUpperCase();
+    }
+    
+    // 初始化设置页面
+    async function initSettings() {
+      // 加载设置
+      await loadSettings();
+      
+      // 加载快捷键
+      await loadShortcuts();
+      
+      // 设置快捷键输入框
+      setupShortcutInput('shortcut-open-main', 'open_main_window', 'CommandOrControl+Shift+C');
+      setupShortcutInput('shortcut-screenshot', 'trigger_screenshot', 'CommandOrControl+Shift+X');
+      
+      // 绑定按钮事件
+      document.getElementById('browse-backup').addEventListener('click', selectBackupFolder);
+      document.getElementById('save-button').addEventListener('click', saveSettings);
+      document.getElementById('cancel-button').addEventListener('click', () => window.close());
+      
+      // 验证密码
+      const passwordInput = document.getElementById('password');
+      const confirmPasswordInput = document.getElementById('confirm-password');
+      const encryptionToggle = document.getElementById('encryption');
+      
+      passwordInput.addEventListener('input', validatePassword);
+      confirmPasswordInput.addEventListener('input', validatePassword);
+      
+      encryptionToggle.addEventListener('change', () => {
+        const disabled = !encryptionToggle.checked;
+        passwordInput.disabled = disabled;
+        confirmPasswordInput.disabled = disabled;
+        
+        if (disabled) {
+          passwordInput.value = '';
+          confirmPasswordInput.value = '';
+        }
+      });
+      
+      function validatePassword() {
+        if (encryptionToggle.checked && passwordInput.value !== confirmPasswordInput.value) {
+          confirmPasswordInput.setCustomValidity('密码不匹配');
+        } else {
+          confirmPasswordInput.setCustomValidity('');
+        }
+      }
+    }
+    
+    // 页面加载完成后初始化设置
+    document.addEventListener('DOMContentLoaded', initSettings);
+  </script>
+</body>
+</html> 

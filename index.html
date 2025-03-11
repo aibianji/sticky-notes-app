@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>便签应用</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // 全局错误处理
+      window.onerror = function(msg, url, line, col, error) {
+        console.error('全局错误:', { msg, url, line, col, error });
+        return false;
+      };
+
+      // Promise 错误处理
+      window.addEventListener('unhandledrejection', function(event) {
+        console.error('未处理的 Promise 拒绝:', event.reason);
+      });
+
+      // Tauri 初始化检查
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOM 已加载，检查 Tauri 状态...');
+        console.log('window.__TAURI__:', window.__TAURI__);
+        console.log('window.__TAURI_IPC__:', window.__TAURI_IPC__);
+      });
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html> 

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>便签</title>
+  <link rel="stylesheet" href="./index.css" />
+  <style>
+    .sticky-note {
+      height: 100%;
+      border-radius: 2px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+      backdrop-filter: blur(8px);
+      transition: all 0.3s;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .note-header {
+      background-color: rgba(255, 255, 255, 0.1);
+      padding: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      -webkit-app-region: drag;
+    }
+    
+    .note-header button {
+      -webkit-app-region: no-drag;
+    }
+    
+    .note-content {
+      flex: 1;
+      padding: 10px;
+      outline: none;
+      resize: none;
+      border: none;
+      background-color: transparent;
+    }
+    
+    .note-footer {
+      padding: 6px 10px;
+      font-size: 11px;
+      color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: space-between;
+    }
+    
+    body {
+      margin: 0;
+      overflow: hidden;
+      height: 100vh;
+      background-color: rgba(255, 250, 220, 0.95);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    
+    .color-menu {
+      display: flex;
+      gap: 4px;
+    }
+    
+    .color-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    
+    .color-dot:hover {
+      transform: scale(1.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="sticky-note">
+    <div class="note-header">
+      <div class="flex">
+        <button class="text-gray-500 hover:text-gray-800 p-1" id="pin-button">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10 2a1 1 0 011 1v1.323l3.954 1.582a1.5 1.5 0 01.646 2.415l-1.222 1.222a1 1 0 01-.293.707L12 12.334V18a1 1 0 11-2 0v-5.666l-2.085-2.085a1 1 0 01-.293-.707L6.4 8.32a1.5 1.5 0 01.646-2.415L11 4.323V3a1 1 0 011-1z" />
+          </svg>
+        </button>
+      </div>
+      <div class="flex">
+        <div class="color-menu mr-2">
+          <div class="color-dot" style="background-color: #FFFADC;" data-color="#FFFADC"></div>
+          <div class="color-dot" style="background-color: #DCFFFA;" data-color="#DCFFFA"></div>
+          <div class="color-dot" style="background-color: #FFDCF5;" data-color="#FFDCF5"></div>
+          <div class="color-dot" style="background-color: #DCEAFF;" data-color="#DCEAFF"></div>
+        </div>
+        <button class="text-gray-500 hover:text-gray-800 p-1" id="minimize-button">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M5 10a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1z" clip-rule="evenodd" />
+          </svg>
+        </button>
+        <button class="text-gray-500 hover:text-red-600 p-1" id="close-button">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    
+    <textarea class="note-content" placeholder="输入内容..." autofocus id="note-content"></textarea>
+    
+    <div class="note-footer">
+      <span id="status">已保存</span>
+      <span id="timestamp">刚刚</span>
+    </div>
+  </div>
+
+  <script>
+    // 获取界面元素
+    const noteContent = document.getElementById('note-content');
+    const status = document.getElementById('status');
+    const timestamp = document.getElementById('timestamp');
+    const pinButton = document.getElementById('pin-button');
+    const minimizeButton = document.getElementById('minimize-button');
+    const closeButton = document.getElementById('close-button');
+    const colorDots = document.querySelectorAll('.color-dot');
+    
+    let noteId = null;
+    let isPinned = false;
+    let saveTimeout = null;
+    
+    // 加载便签数据（未来会从 Tauri 调用中获取）
+    async function loadNote() {
+      // 这里是演示数据
+      noteContent.value = '';
+      updateTimestamp();
+    }
+    
+    // 保存便签（未来会调用 Tauri 命令）
+    async function saveNote() {
+      if (noteContent.value.trim() === '') return;
+      
+      status.textContent = '保存中...';
+      
+      try {
+        // 模拟保存操作
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        status.textContent = '已保存';
+        updateTimestamp();
+      } catch (error) {
+        console.error('保存失败:', error);
+        status.textContent = '保存失败';
+      }
+    }
+    
+    // 防抖保存
+    function debounceSave() {
+      status.textContent = '编辑中...';
+      
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+      }
+      
+      saveTimeout = setTimeout(() => {
+        saveNote();
+      }, 1000);
+    }
+    
+    // 更新时间戳
+    function updateTimestamp() {
+      timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    
+    // 事件监听
+    noteContent.addEventListener('input', debounceSave);
+    
+    pinButton.addEventListener('click', () => {
+      isPinned = !isPinned;
+      pinButton.classList.toggle('text-blue-500', isPinned);
+      
+      // 未来会调用 Tauri 命令设置窗口置顶
+      console.log('设置置顶:', isPinned);
+    });
+    
+    minimizeButton.addEventListener('click', () => {
+      // 未来会调用 Tauri 命令最小化窗口
+      console.log('最小化窗口');
+    });
+    
+    closeButton.addEventListener('click', () => {
+      // 保存并关闭
+      saveNote().then(() => {
+        // 未来会调用 Tauri 命令关闭窗口
+        console.log('关闭窗口');
+      });
+    });
+    
+    // 颜色选择
+    colorDots.forEach(dot => {
+      dot.addEventListener('click', () => {
+        const color = dot.getAttribute('data-color');
+        document.body.style.backgroundColor = color;
+        
+        // 未来会调用 Tauri 命令保存颜色
+        console.log('设置颜色:', color);
+      });
+    });
+    
+    // 初始化
+    loadNote();
+  </script>
+</body>
+</html> 
