@@ -12,20 +12,6 @@
     "version": "0.1.0"
   },
   "tauri": {
-    "allowlist": {
-      "all": true,
-      "fs": {
-        "all": true,
-        "scope": ["$APP/*", "$APPDATA/*"]
-      },
-      "window": {
-        "all": true
-      },
-      "shell": {
-        "all": false,
-        "open": true
-      }
-    },
     "bundle": {
       "active": true,
       "category": "Utility",
@@ -60,15 +46,7 @@
       }
     },
     "security": {
-      "csp": null,
-      "capabilities": {
-        "default": ["app-all"]
-      }
-    },
-    "tray": {
-      "iconPath": "icons/icon.ico",
-      "iconAsTemplate": true,
-      "menuOnLeftClick": false
+      "csp": null
     },
     "windows": [
       {

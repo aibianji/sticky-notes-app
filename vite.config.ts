@@ -30,5 +30,11 @@ export default defineConfig({
 
   optimizeDeps: {
     include: ['@tauri-apps/api']
+  },
+
+  resolve: {
+    alias: {
+      '@': '/src'
+    }
   }
 }) 

@@ -5,6 +5,40 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>便签应用</title>
+    <script>
+      // 初始化 Tauri 全局对象
+      window.__TAURI__ = window.__TAURI__ || {};
+      window.__TAURI__.invoke = window.__TAURI__.invoke || function(cmd, args) {
+        console.warn('模拟 Tauri 调用:', cmd, args);
+        // 模拟一些基本命令的响应
+        if (cmd === 'run_app') {
+          return Promise.resolve(true);
+        } else if (cmd === 'get_notes') {
+          return Promise.resolve([]);
+        } else if (cmd === 'create_note') {
+          return Promise.resolve({ 
+            id: Math.floor(Math.random() * 1000), 
+            ...args.note 
+          });
+        }
+        return Promise.resolve(null);
+      };
+      
+      window.__TAURI_IPC__ = window.__TAURI_IPC__ || {
+        postMessage: function(message) {
+          console.warn('模拟 Tauri IPC 消息:', message);
+        }
+      };
+      
+      // 捕获全局错误并显示
+      window.addEventListener('error', function(event) {
+        console.error('全局错误:', event.error);
+      });
+
+      window.addEventListener('unhandledrejection', function(event) {
+        console.error('未处理的 Promise 拒绝:', event.reason);
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
@@ -14,11 +48,6 @@
         console.error('全局错误:', { msg, url, line, col, error });
         return false;
       };
-
-      // Promise 错误处理
-      window.addEventListener('unhandledrejection', function(event) {
-        console.error('未处理的 Promise 拒绝:', event.reason);
-      });
 
       // Tauri 初始化检查
       document.addEventListener('DOMContentLoaded', () => {
