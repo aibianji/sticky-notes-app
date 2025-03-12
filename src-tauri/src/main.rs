@@ -12,10 +12,11 @@ mod commands;
 mod screenshot;
 mod settings;
 mod reminder;
+mod logger;
 
 use std::sync::Mutex;
 use once_cell::sync::Lazy;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, CustomMenuItem, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem};
 use window_shadows::set_shadow;
 use key_manager::KeyManager;
 
@@ -23,24 +24,28 @@ static DB_CONNECTION: Lazy<Mutex<Option<rusqlite::Connection>>> = Lazy::new(|| M
 
 // 运行应用程序
 #[tauri::command]
-fn run_app() -> Result<String, String> {
-    Ok("应用已启动".to_string())
+fn run_app() -> String {
+    "App initialized successfully".into()
+}
+
+#[tauri::command]
+fn handle_context_menu(window: tauri::Window) {
+    let menu = tray::create_tray_menu();
+    menu.open(&window, tauri::Position::Cursor);
 }
 
 fn main() {
-    // 创建系统托盘
-    let tray = tray::create_tray();
-
-    // 初始化数据库
-    if let Err(e) = db::init_database() {
-        eprintln!("数据库初始化失败: {}", e);
-        std::process::exit(1);
-    }
-
     tauri::Builder::default()
-        .plugin(tauri_plugin_global_shortcut::init())
-        .manage(commands::DatabaseState(Mutex::new(db::Database::new())))
         .setup(|app| {
+            // 初始化日志系统
+            if let Err(e) = logger::init_logger(app.handle()) {
+                eprintln!("日志系统初始化失败: {}", e);
+            }
+            
+            // 创建系统托盘
+            let tray = tray::create_tray();
+            app.manage(tray);
+            
             // 注册全局快捷键
             if let Err(e) = shortcut::register_shortcuts(app.handle()) {
                 eprintln!("注册全局快捷键失败: {}", e);
@@ -55,10 +60,11 @@ fn main() {
 
             Ok(())
         })
-        .tray(tray)
-        .on_tray_event(tray::handle_tray_event)
+        .system_tray(tray)
+        .on_system_tray_event(tray::handle_tray_event)
         .invoke_handler(tauri::generate_handler![
             run_app,
+            handle_context_menu,
             // 快捷键相关命令
             shortcut::get_all_shortcut_mappings,
             shortcut::check_shortcut,
@@ -86,6 +92,8 @@ fn main() {
             // 截图相关命令
             screenshot::save_screenshot_data,
             screenshot::cancel_screenshot,
+            // 日志相关命令
+            logger::log_message
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
